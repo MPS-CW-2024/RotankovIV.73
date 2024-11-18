@@ -17,7 +17,8 @@ SOURCES = src/main.c \
          src/lcd.c \
          src/uart.c \
          src/dht.c \
-		 src/zone_control.c
+		 src/zone_control.c \
+		 src/time.c
 
 OBJECTS = $(SOURCES:src/%.c=$(OBJDIR)/%.o)
 
