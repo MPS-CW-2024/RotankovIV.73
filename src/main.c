@@ -10,6 +10,7 @@ static Zone zones[NUM_ZONES];
 static SystemTime systemTime;
 static uint8_t currentZone = 0;
 static uint8_t selectedParam = 0;
+static uint8_t displayNeedsUpdate = 1;
 
 static volatile uint8_t lastButtonState = 0;
 static volatile uint8_t lastTimeButtonState = 0;
@@ -27,6 +28,11 @@ ISR(TIMER0_COMP_vect) {
         
         for(uint8_t i = 0; i < NUM_ZONES; i++) {
             updateZone(&zones[i], &systemTime);
+        }
+        
+        // Update display every second only in time setting mode
+        if(systemTime.isSettingTime) {
+            displayNeedsUpdate = 1;
         }
     }
     
@@ -51,7 +57,7 @@ static void initPorts(void) {
 static void handleButtons(void) {
     if(debounceTime > 0) return;
 
-    uint8_t buttons = ~PINC & 0xF8; // Zone buttons (PC3-PC7)
+    uint8_t buttons = ~PINC & 0xF8;
     uint8_t timeButton = ~PIND & (1<<PD6);
     
     if(buttons != lastButtonState || timeButton != lastTimeButtonState) {
@@ -60,24 +66,39 @@ static void handleButtons(void) {
         lastTimeButtonState = timeButton;
         
         if(timeButton) {
-            toggleTimeSettings(&systemTime);
+            systemTime.isSettingTime = !systemTime.isSettingTime;
+            displayNeedsUpdate = 1;
             if(systemTime.isSettingTime) {
                 updateTimeDisplay(&systemTime);
+            } else {
+                updateDisplay(zones, currentZone, selectedParam);
             }
         }
-        else if(systemTime.isSettingTime) {
-            if(buttons & (1<<PC5)) adjustTime(&systemTime, 5);  // V+
-            if(buttons & (1<<PC6)) adjustTime(&systemTime, -5); // V-
-            updateTimeDisplay(&systemTime);
-        }
-        else {
-            if(buttons & (1<<PC3)) currentZone = (currentZone + 1) % NUM_ZONES;
-            if(buttons & (1<<PC4)) selectedParam = (selectedParam + 1) % 4;
-            if(buttons & (1<<PC5)) adjustParameter(&zones[currentZone], selectedParam, 1);
-            if(buttons & (1<<PC6)) adjustParameter(&zones[currentZone], selectedParam, -1);
-            if(buttons & (1<<PC7)) toggleManual(&zones[currentZone]);
-            
-            updateDisplay(zones, currentZone, selectedParam);
+        else if(buttons) {
+            if(systemTime.isSettingTime) {
+                if(buttons & (1<<PC5)) adjustTime(&systemTime, 5);  // V+
+                if(buttons & (1<<PC6)) adjustTime(&systemTime, -5); // V-
+                displayNeedsUpdate = 1;
+            }
+            else {
+                if(buttons & (1<<PC3)) {
+                    currentZone = (currentZone + 1) % NUM_ZONES;
+                    displayNeedsUpdate = 1;
+                }
+                if(buttons & (1<<PC4)) {
+                    selectedParam = (selectedParam + 1) % 4;
+                    displayNeedsUpdate = 1;
+                }
+                if(buttons & (1<<PC5) || buttons & (1<<PC6)) {
+                    int8_t change = (buttons & (1<<PC5)) ? 1 : -1;
+                    adjustParameter(&zones[currentZone], selectedParam, change);
+                    displayNeedsUpdate = 1;
+                }
+                if(buttons & (1<<PC7)) {
+                    toggleManual(&zones[currentZone]);
+                    displayNeedsUpdate = 1;
+                }
+            }
         }
     }
 }
@@ -99,14 +120,23 @@ int main(void) {
     
     sei();
     
+    // Initial display update
+    updateDisplay(zones, currentZone, selectedParam);
+    
     while(1) {
         handleButtons();
         processDhtData(&zones[0], 0);
         processDhtData(&zones[1], 1);
         checkLeaks(zones);
         
-        if(!systemTime.isSettingTime) {
-            updateDisplay(zones, currentZone, selectedParam);
+        // Update display only when needed
+        if(displayNeedsUpdate) {
+            if(systemTime.isSettingTime) {
+                updateTimeDisplay(&systemTime);
+            } else {
+                updateDisplay(zones, currentZone, selectedParam);
+            }
+            displayNeedsUpdate = 0;
         }
     }
     
