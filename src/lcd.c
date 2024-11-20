@@ -71,14 +71,13 @@ void updateDisplay(Zone* zones, uint8_t currentZone, uint8_t selectedParam) {
     char buf[16];
     lcd_cmd(0x01);
     
-    // First line: Zone info with start time
-    sprintf(buf, "Zone%d %02d:%02d/%d%%", currentZone + 1,
+    sprintf(buf, "Zone%d %02d:%02d/%d%%", 
+            currentZone + 1,
             zones[currentZone].startHour,
             zones[currentZone].startMinute,
             zones[currentZone].humidity);
     lcd_string(buf);
     
-    // Second line: Selected parameter
     lcd_goto(1, 0);
     switch(selectedParam) {
         case PARAM_SCHEDULE:
@@ -93,12 +92,12 @@ void updateDisplay(Zone* zones, uint8_t currentZone, uint8_t selectedParam) {
             break;
             
         case PARAM_TIME:
-            sprintf(buf, "Duration: %dmin", 
+            sprintf(buf, "Duration: %dm", 
                     zones[currentZone].wateringTime);
             break;
             
         case PARAM_FLOW:
-            sprintf(buf, "Flow Rate: %dHz", 
+            sprintf(buf, "Flow: %d L/min", 
                     zones[currentZone].flowRate);
             break;
     }

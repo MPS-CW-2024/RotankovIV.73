@@ -5,9 +5,13 @@
 #include "lcd.h"
 #include "uart.h"
 #include "dht.h"
+#include "zone_control.h"
 
-static Zone zones[NUM_ZONES];
-static SystemTime systemTime;
+// Глобальные переменные, доступные для других модулей
+Zone zones[NUM_ZONES];
+SystemTime systemTime;
+
+// Локальные переменные
 static uint8_t currentZone = 0;
 static uint8_t selectedParam = 0;
 static uint8_t displayNeedsUpdate = 1;
@@ -15,9 +19,6 @@ static uint8_t displayNeedsUpdate = 1;
 static volatile uint8_t lastButtonState = 0;
 static volatile uint8_t lastTimeButtonState = 0;
 static volatile uint16_t debounceTime = 0;
-
-ISR(INT0_vect) { zones[0].flowCount++; }
-ISR(INT1_vect) { zones[1].flowCount++; }
 
 ISR(TIMER0_COMP_vect) {
     static uint16_t msCounter = 0;
@@ -27,31 +28,41 @@ ISR(TIMER0_COMP_vect) {
         incrementTime(&systemTime);
         
         for(uint8_t i = 0; i < NUM_ZONES; i++) {
-            updateZone(&zones[i], &systemTime);
+            updateZone(&zones[i], i, &systemTime);
         }
         
-        // Update display every second only in time setting mode
         if(systemTime.isSettingTime) {
             displayNeedsUpdate = 1;
         }
     }
     
-    if(debounceTime > 0) debounceTime--;
+    if(debounceTime > 0) {
+        debounceTime--;
+    }
 }
 
 static void initPorts(void) {
-    // Setup zone buttons with pullups
+    // Zone buttons
     DDRC &= ~((1<<PC3)|(1<<PC4)|(1<<PC5)|(1<<PC6)|(1<<PC7));
     PORTC |= (1<<PC3)|(1<<PC4)|(1<<PC5)|(1<<PC6)|(1<<PC7);
     
-    // Setup Time button on PD6 with pullup
+    // Time button on PD6
     DDRD &= ~(1<<PD6);
     PORTD |= (1<<PD6);
     
+    // Flow meter inputs
+    DDRB &= ~((1<<PB3)|(1<<PB4));
+    PORTB |= (1<<PB3)|(1<<PB4);
+    
     // Outputs
-    DDRB |= (1<<PB0)|(1<<PB1); // Pump LEDs
-    DDRD |= (1<<PD7);          // Leak LED
-    DDRE |= (1<<PE0);          // Buzzer
+    DDRB |= (1<<PB0)|(1<<PB1);     // Pump LEDs
+    PORTB &= ~((1<<PB0)|(1<<PB1)); // Initially off
+    
+    DDRD |= (1<<PD7);              // Leak LED
+    PORTD &= ~(1<<PD7);            // Initially off
+    
+    DDRE |= (1<<PE0);              // Buzzer
+    PORTE &= ~(1<<PE0);            // Initially off
 }
 
 static void handleButtons(void) {
@@ -95,8 +106,10 @@ static void handleButtons(void) {
                     displayNeedsUpdate = 1;
                 }
                 if(buttons & (1<<PC7)) {
-                    toggleManual(&zones[currentZone]);
+                    toggleManual(&zones[currentZone], currentZone);
                     displayNeedsUpdate = 1;
+                    // Отправляем статус по UART
+                    sendZoneData(currentZone);
                 }
             }
         }
@@ -104,6 +117,7 @@ static void handleButtons(void) {
 }
 
 int main(void) {
+    // Инициализация
     initPorts();
     initZones(zones);
     initSystemTime(&systemTime);
@@ -111,17 +125,17 @@ int main(void) {
     initUart();
     initDht();
     
+    // Настройка таймера
     OCR0 = 57;
     TCCR0 = (1<<WGM01)|(1<<CS01)|(1<<CS00);
     TIMSK |= (1<<OCIE0);
     
-    MCUCR |= (1<<ISC01)|(1<<ISC11);
-    GICR |= (1<<INT0)|(1<<INT1);
-    
     sei();
     
-    // Initial display update
+    // Начальное отображение
     updateDisplay(zones, currentZone, selectedParam);
+    // Отправка сообщения о старте системы
+    uartSendString("System started");
     
     while(1) {
         handleButtons();
@@ -129,7 +143,6 @@ int main(void) {
         processDhtData(&zones[1], 1);
         checkLeaks(zones);
         
-        // Update display only when needed
         if(displayNeedsUpdate) {
             if(systemTime.isSettingTime) {
                 updateTimeDisplay(&systemTime);
@@ -141,4 +154,4 @@ int main(void) {
     }
     
     return 0;
-}
+}   

@@ -19,9 +19,9 @@ typedef struct {
 } Zone;
 
 void initZones(Zone* zones);
-void updateZone(Zone* zone, SystemTime* time);
+void updateZone(Zone* zone, uint8_t index, SystemTime* time);
 void adjustParameter(Zone* zone, uint8_t param, int8_t change);
-void toggleManual(Zone* zone);
+void toggleManual(Zone* zone, uint8_t index);
 
 
 
