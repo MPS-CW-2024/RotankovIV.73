@@ -73,9 +73,9 @@ void handleUartMessage(void) {
 
     // Команды управления зонами
     if (strncmp(message, "zone", 4) == 0) {
-        uint8_t zone;
-        if (sscanf(message, "zone%hhu:", &zone) == 1 && zone > 0 && zone <= NUM_ZONES) {
-            zone--; // В 0-based индекс
+        unsigned int tmp_zone;
+        if (sscanf(message, "zone%u:", &tmp_zone) == 1 && tmp_zone > 0 && tmp_zone <= NUM_ZONES) {
+            uint8_t zone = (uint8_t)(tmp_zone - 1);
 
             // Включение помпы
             if (strstr(message, "pump:on;")) {

@@ -50,7 +50,7 @@ static void initPorts(void) {
     DDRD &= ~(1<<PD6);
     PORTD |= (1<<PD6);
     
-    // Flow meter inputs
+    // Leak detection buttons with pullups
     DDRB &= ~((1<<PB3)|(1<<PB4));
     PORTB |= (1<<PB3)|(1<<PB4);
     
