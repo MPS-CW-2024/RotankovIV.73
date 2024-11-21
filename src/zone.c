@@ -44,17 +44,29 @@ void toggleManual(Zone* zone, uint8_t index) {
     zone->isManual = !zone->isManual;
     zone->isActive = zone->isManual;
     
-    // Обновляем состояние помпы
     if(zone->isActive) {
-        PORTB |= (1 << index);  // Включаем LED помпы
+        PORTB |= (1 << index);     // Включаем LED
     } else {
-        PORTB &= ~(1 << index); // Выключаем LED помпы
+        PORTB &= ~(1 << index);    // Выключаем LED
         zone->timeRemaining = 0;
     }
-    
-    // Отправляем статус по UART
-    sendZoneData(index);
 }
+
+// void setZoneActive(Zone* zone, uint8_t index, uint8_t active) {
+//     cli();
+    
+//     zone->isManual = active;
+//     zone->isActive = active;
+    
+//     if(active) {
+//         PORTB |= (1 << index);
+//     } else {
+//         PORTB &= ~(1 << index);
+//         zone->timeRemaining = 0;
+//     }
+    
+//     sei();
+// }
 
 void adjustParameter(Zone* zone, uint8_t param, int8_t change) {
     switch(param) {
