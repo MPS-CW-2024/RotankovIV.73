@@ -1,41 +1,62 @@
 #include "zone_control.h"
+#include "lcd.h"
 #include <avr/io.h>
 
-void updateZoneLeds(Zone* zones) {
-    uint8_t pumpStatus = 0;
-    for(uint8_t i = 0; i < NUM_ZONES; i++) {
-        if(zones[i].isActive) {
-            pumpStatus |= (1 << i);
-        }
-    }
-    PORTB = (PORTB & 0xF8) | pumpStatus;
-}
+#define FLOW_CHECK_MS 10000
+#define LEAK_THRESHOLD 20    // 20% отклонение
+
+static uint8_t leakStates = 0;
 
 void handleZoneAlarm(uint8_t zoneIdx, uint8_t hasLeak) {
     if(hasLeak) {
-        PORTD |= (1 << PD7);  // Leak LED
-        PORTE |= (1 << PE0);  // Buzzer
+        if(!(leakStates & (1 << zoneIdx))) {
+            leakStates |= (1 << zoneIdx);
+            PORTD |= (1 << PD7);    // LED
+            PORTE |= (1 << PE0);    // Buzzer
+            displayError("Flow Error!");
+        }
     } else {
-        PORTD &= ~(1 << PD7);
-        PORTE &= ~(1 << PE0);
+        leakStates &= ~(1 << zoneIdx);
+        if(!leakStates) {
+            PORTD &= ~(1 << PD7);
+            PORTE &= ~(1 << PE0);
+        }
     }
 }
 
 void checkLeaks(Zone* zones) {
-    static uint16_t lastCheck = 0;
-    lastCheck++;
+    // Читаем состояния кнопок утечки (активный уровень - низкий)
+    uint8_t currentPB3 = (PINB & (1 << PB3)) == 0;
+    uint8_t currentPB4 = (PINB & (1 << PB4)) == 0;
     
-    if(lastCheck >= 100) {
-        lastCheck = 0;
+    // Проверяем каждую зону
+    for(uint8_t i = 0; i < NUM_ZONES; i++) {
+        uint8_t hasLeak = (i == 0) ? currentPB3 : currentPB4;
         
-        for(uint8_t i = 0; i < NUM_ZONES; i++) {
-            if(zones[i].isActive) {
-                uint8_t actualRate = zones[i].flowCount;
-                zones[i].flowCount = 0;
-                
-                uint8_t hasLeak = (actualRate > (zones[i].flowRate + 2) || 
-                                 actualRate < (zones[i].flowRate - 2));
-                handleZoneAlarm(i, hasLeak);
+        // Обрабатываем утечку только если зона активна
+        if(zones[i].isActive) {
+            if(hasLeak) {
+                if(!(leakStates & (1 << i))) {
+                    leakStates |= (1 << i);
+                    PORTD |= (1 << PD7);    // LED
+                    PORTE |= (1 << PE0);    // Buzzer
+                    char buf[16];
+                    sprintf(buf, "Leak in Zone %d!", i + 1);
+                    displayError(buf);
+                }
+            } else {
+                leakStates &= ~(1 << i);
+                if(!leakStates) {
+                    PORTD &= ~(1 << PD7);
+                    PORTE &= ~(1 << PE0);
+                }
+            }
+        } else {
+            // Если зона неактивна, сбрасываем её состояние утечки
+            leakStates &= ~(1 << i);
+            if(!leakStates) {
+                PORTD &= ~(1 << PD7);
+                PORTE &= ~(1 << PE0);
             }
         }
     }

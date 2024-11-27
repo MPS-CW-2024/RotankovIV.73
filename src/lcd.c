@@ -52,27 +52,61 @@ void lcd_goto(uint8_t row, uint8_t col) {
     lcd_cmd(0x80 | (row * 0x40 + col));
 }
 
+void updateTimeDisplay(SystemTime* time) {
+    char buf[16];
+    lcd_cmd(0x01);  // Clear display
+    
+    if(time->isSettingTime) {
+        lcd_string("Set Time:");
+    } else {
+        lcd_string("Time:");
+    }
+    
+    sprintf(buf, "%02d:%02d:%02d", time->hours, time->minutes, time->seconds);
+    lcd_goto(0, 6);
+    lcd_string(buf);
+}
+
 void updateDisplay(Zone* zones, uint8_t currentZone, uint8_t selectedParam) {
     char buf[16];
-    
     lcd_cmd(0x01);
     
-    sprintf(buf, "Zone%d H:%d/%d", currentZone+1, 
-            zones[currentZone].humidity,
-            zones[currentZone].targetHumidity);
+    sprintf(buf, "Zone%d %02d:%02d/%d%%", 
+            currentZone + 1,
+            zones[currentZone].startHour,
+            zones[currentZone].startMinute,
+            zones[currentZone].humidity);
     lcd_string(buf);
     
     lcd_goto(1, 0);
     switch(selectedParam) {
-        case 0:
-            sprintf(buf, "Target Hum: %d%%", zones[currentZone].targetHumidity);
+        case PARAM_SCHEDULE:
+            sprintf(buf, "Start: %02d:%02d", 
+                    zones[currentZone].startHour,
+                    zones[currentZone].startMinute);
             break;
-        case 1:
-            sprintf(buf, "Time: %ds", zones[currentZone].wateringTime);
+            
+        case PARAM_HUMIDITY:
+            sprintf(buf, "Target Hum: %d%%", 
+                    zones[currentZone].targetHumidity);
             break;
-        case 2:
-            sprintf(buf, "Flow: %dHz", zones[currentZone].flowRate);
+            
+        case PARAM_TIME:
+            sprintf(buf, "Duration: %dm", 
+                    zones[currentZone].wateringTime);
+            break;
+            
+        case PARAM_FLOW:
+            sprintf(buf, "Flow: %d L/min", 
+                    zones[currentZone].flowRate);
             break;
     }
     lcd_string(buf);
+}
+
+void displayError(const char* message) {
+    lcd_cmd(0x01);
+    lcd_string("Error:");
+    lcd_goto(1, 0);
+    lcd_string(message);
 }

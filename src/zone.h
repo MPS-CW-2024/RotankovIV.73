@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <stdbool.h>
+#include "time.h"
 
 #define NUM_ZONES 2
 
@@ -17,23 +18,13 @@ typedef struct {
     uint8_t isManual;
 } Zone;
 
-typedef struct {
-    uint8_t hours;
-    uint8_t minutes;
-    uint8_t seconds;
-    uint8_t isSettingTime;    // Flag for time setting mode
-} SystemTime;
-
 void initZones(Zone* zones);
-void updateZone(Zone* zone);
+void updateZone(Zone* zone, uint8_t index, SystemTime* time);
+// void setZoneActive(Zone* zone, uint8_t index, uint8_t active);
 void adjustParameter(Zone* zone, uint8_t param, int8_t change);
-void toggleManual(Zone* zone);
-void checkLeaks(Zone* zones);
+void toggleManual(Zone* zone, uint8_t index);
 
-// new functions for global time setting
-void incrementTime(SystemTime* time);
-void adjustTime(SystemTime* time, int8_t minuteChange);
-void setTime(SystemTime* time, uint8_t hours, uint8_t minutes, uint8_t seconds);
+
 
 // Parameters
 #define PARAM_HUMIDITY 0
