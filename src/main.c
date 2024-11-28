@@ -42,27 +42,27 @@ ISR(TIMER0_COMP_vect) {
 }
 
 static void initPorts(void) {
-    // Zone buttons
+    // Кнопки зон
     DDRC &= ~((1<<PC3)|(1<<PC4)|(1<<PC5)|(1<<PC6)|(1<<PC7));
     PORTC |= (1<<PC3)|(1<<PC4)|(1<<PC5)|(1<<PC6)|(1<<PC7);
     
-    // Time button on PD6
+    // Настройка времени PD6
     DDRD &= ~(1<<PD6);
     PORTD |= (1<<PD6);
     
-    // Leak detection buttons with pullups
+    // Детекция утечек
     DDRB &= ~((1<<PB3)|(1<<PB4));
     PORTB |= (1<<PB3)|(1<<PB4);
     
-    // Outputs
-    DDRB |= (1<<PB0)|(1<<PB1);     // Pump LEDs
-    PORTB &= ~((1<<PB0)|(1<<PB1)); // Initially off
+    // Выводы
+    DDRB |= (1<<PB0)|(1<<PB1);     // Светодиоды помп
+    PORTB &= ~((1<<PB0)|(1<<PB1));
     
-    DDRD |= (1<<PD7);              // Leak LED
-    PORTD &= ~(1<<PD7);            // Initially off
+    DDRD |= (1<<PD7);              // Светодиод утечки
+    PORTD &= ~(1<<PD7);            
     
-    DDRE |= (1<<PE0);              // Buzzer
-    PORTE &= ~(1<<PE0);            // Initially off
+    DDRE |= (1<<PE0);              // Пьезоизлучатель
+    PORTE &= ~(1<<PE0);
 }
 
 static void handleButtons(void) {

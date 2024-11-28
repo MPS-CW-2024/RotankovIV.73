@@ -30,7 +30,6 @@ void adjustTime(SystemTime* time, int8_t minuteChange) {
     int16_t totalMinutes = time->hours * 60 + time->minutes;
     totalMinutes += minuteChange;
     
-    // Handle wrap-around
     while(totalMinutes < 0) totalMinutes += 24 * 60;
     while(totalMinutes >= 24 * 60) totalMinutes -= 24 * 60;
     

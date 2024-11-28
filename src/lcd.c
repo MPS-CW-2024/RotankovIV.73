@@ -54,7 +54,7 @@ void lcd_goto(uint8_t row, uint8_t col) {
 
 void updateTimeDisplay(SystemTime* time) {
     char buf[16];
-    lcd_cmd(0x01);  // Clear display
+    lcd_cmd(0x01);  // Очищаем дисплей
     
     if(time->isSettingTime) {
         lcd_string("Set Time:");

@@ -12,7 +12,7 @@ void handleZoneAlarm(uint8_t zoneIdx, uint8_t hasLeak) {
         if(!(leakStates & (1 << zoneIdx))) {
             leakStates |= (1 << zoneIdx);
             PORTD |= (1 << PD7);    // LED
-            PORTE |= (1 << PE0);    // Buzzer
+            PORTE |= (1 << PE0);    // Пьезоизлучатель
             displayError("Flow Error!");
         }
     } else {
@@ -39,7 +39,7 @@ void checkLeaks(Zone* zones) {
                 if(!(leakStates & (1 << i))) {
                     leakStates |= (1 << i);
                     PORTD |= (1 << PD7);    // LED
-                    PORTE |= (1 << PE0);    // Buzzer
+                    PORTE |= (1 << PE0);    // Пьезоизлучатель
                     char buf[16];
                     sprintf(buf, "Leak in Zone %d!", i + 1);
                     displayError(buf);
