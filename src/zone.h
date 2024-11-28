@@ -18,6 +18,9 @@ typedef struct {
     uint8_t isManual;
 } Zone;
 
+// Флаг защиты от обновлений по таймеру 
+extern volatile uint8_t zoneUpdateDisabled;
+
 void initZones(Zone* zones);
 void updateZone(Zone* zone, uint8_t index, SystemTime* time);
 // void setZoneActive(Zone* zone, uint8_t index, uint8_t active);

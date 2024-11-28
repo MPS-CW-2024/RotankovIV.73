@@ -44,63 +44,52 @@ void sendCurrentData(void) {
 
 void handleUartMessage(void) {
     // Команда запроса данных
-    if (strcmp(message, "data;") == 0) {
+   if(strcmp(message, "data;") == 0) {
+        // При запросе данных разрешаем обновление
+        zoneUpdateDisabled = 0;
         sendCurrentData();
         return;
     }
 
-    // Установка времени
-    int tmp_H, tmp_M, tmp_S;
-    if (sscanf(message, "time:%d:%d:%d;", &tmp_H, &tmp_M, &tmp_S) == 3) {
-        if (tmp_H >= 0 && tmp_H < 24 && tmp_M >= 0 && tmp_M < 60 && tmp_S >= 0 && tmp_S < 60) {
-            setTime(&systemTime, tmp_H, tmp_M, tmp_S);
-            uartSendString("OK");
-            return;
-        }
-    }
-
-    // Команды для зон
-    if (strncmp(message, "zone", 4) == 0 && message[4] >= '1' && message[4] <= '2') {
-        uint8_t zone = message[4] - '1';
-
-        // Включение/выключение помпы
-        if (strcmp(message + 5, ":on;") == 0) {
+    // Обработка команд для зон
+    int zone;
+    char action[16]; 
+    if(sscanf(message, "zone%1d:%[^;];", &zone, action) == 2 && 
+       zone >= 1 && zone <= NUM_ZONES) {
+       
+        zone--;
+        
+        // Отключаем обновление по таймеру
+        cli();
+        zoneUpdateDisabled = 1;
+        
+        if(strcmp(action, "on") == 0) {
             zones[zone].isManual = 1;
             zones[zone].isActive = 1;
             PORTB |= (1 << zone);
-            uartSendString("ON");
+            sei();
+            uartSendString("OK");
             return;
         }
-        if (strcmp(message + 5, ":off;") == 0) {
-            zones[zone].isManual = 0;
+        
+        if(strcmp(action, "off") == 0) {
+            zones[zone].isManual = 0; 
             zones[zone].isActive = 0;
+            zones[zone].timeRemaining = 0;
             PORTB &= ~(1 << zone);
-            uartSendString("OFF");
+            sei();
+            uartSendString("OK");
             return;
         }
 
-        // Установка расхода
-        int flow;
-        if (sscanf(message + 5, ":flow:%d;", &flow) == 1) {
-            if (flow >= 1 && flow <= 20) {
-                zones[zone].flowRate = flow;
-                uartSendString("OK");
-                return;
-            }
-        }
-
-        // Установка времени запуска
-        int startH, startM;
-        if (sscanf(message + 5, ":start:%d:%d;", &startH, &startM) == 2) {
-            if (startH >= 0 && startH < 24 && startM >= 0 && startM < 60) {
-                zones[zone].startHour = startH;
-                zones[zone].startMinute = startM;
-                uartSendString("OK");
-                return;
-            }
-        }
+        // После команды - оставляем обновления отключенными
+        sei();
+        uartSendString("OK");
+        return;
     }
 
+    // При ошибке включаем обновления
+    zoneUpdateDisabled = 0;
     uartSendString("ERROR");
 }
 
