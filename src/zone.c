@@ -55,22 +55,6 @@ void toggleManual(Zone* zone, uint8_t index) {
     }
 }
 
-// void setZoneActive(Zone* zone, uint8_t index, uint8_t active) {
-//     cli();
-    
-//     zone->isManual = active;
-//     zone->isActive = active;
-    
-//     if(active) {
-//         PORTB |= (1 << index);
-//     } else {
-//         PORTB &= ~(1 << index);
-//         zone->timeRemaining = 0;
-//     }
-    
-//     sei();
-// }
-
 void adjustParameter(Zone* zone, uint8_t param, int8_t change) {
     switch(param) {
         case PARAM_SCHEDULE: {

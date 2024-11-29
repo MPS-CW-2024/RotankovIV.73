@@ -51,6 +51,15 @@ void handleUartMessage(void) {
         return;
     }
 
+    int tmp_H, tmp_M, tmp_S;
+    if (sscanf(message, "time:%d:%d:%d;", &tmp_H, &tmp_M, &tmp_S) == 3) {
+        if (tmp_H >= 0 && tmp_H < 24 && tmp_M >= 0 && tmp_M < 60 && tmp_S >= 0 && tmp_S < 60) {
+            setTime(&systemTime, tmp_H, tmp_M, tmp_S);
+            uartSendString("OK");
+            return;
+        }
+    }
+
     // Обработка команд для зон
     int zone;
     char action[16]; 
