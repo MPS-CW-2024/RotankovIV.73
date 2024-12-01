@@ -1,8 +1,9 @@
 # Ignore compiled object files and ELF files
 *.o
-*.elf
+# *.elf
 *.map
-*.hex
+# not best practice but anyway
+# *.hex
 *.bin
 *.lst
 *.lss
