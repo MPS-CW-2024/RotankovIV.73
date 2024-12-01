@@ -138,6 +138,31 @@ void handleCommand(void) {
             SREG = sreg;
             uartSendString("OFF");
             return;
+        }else if(strncmp(cmd, "flow:", 5) == 0) {
+            // Parse flow rate
+            int flowRate;
+            if(sscanf(cmd + 5, "%d", &flowRate) == 1 && flowRate >=1 && flowRate <= 20) {
+                uint8_t sreg = SREG;
+                cli();
+                zones[zone].flowRate = flowRate;
+                SREG = sreg;
+                uartSendString("OK");
+                return;
+            }
+        }
+        else if(strncmp(cmd, "start:", 6) == 0) {
+            // Parse start time
+            int startHour, startMin;
+            if(sscanf(cmd + 6, "%d:%d", &startHour, &startMin) == 2 &&
+               startHour >= 0 && startHour < 24 && startMin >= 0 && startMin < 60) {
+                uint8_t sreg = SREG;
+                cli();
+                zones[zone].startHour = startHour;
+                zones[zone].startMinute = startMin;
+                SREG = sreg;
+                uartSendString("OK");
+                return;
+            }
         }
     }
 
