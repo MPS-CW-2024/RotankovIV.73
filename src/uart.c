@@ -163,6 +163,18 @@ void handleCommand(void) {
                 uartSendString("OK");
                 return;
             }
+        }else if(strncmp(cmd, "time:", 5) == 0) {
+            // Parse start time
+            int watering_time;
+            if(sscanf(cmd + 5, "%d", &watering_time) == 1 &&
+               watering_time >= 0 && watering_time < 360) {
+                uint8_t sreg = SREG;
+                cli();
+                zones[zone].wateringTime = watering_time;
+                SREG = sreg;
+                uartSendString("OK");
+                return;
+            }
         }
     }
 

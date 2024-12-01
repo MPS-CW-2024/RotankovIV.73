@@ -40,6 +40,7 @@ void checkLeaks(Zone* zones) {
                     playErrorTone();
                     char buf[16];
                     sprintf(buf, "Leak in Zone %d!", i + 1);
+                    uartSendString(buf);
                     displayError(buf);
                 }
             } else {
