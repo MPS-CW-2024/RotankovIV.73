@@ -69,6 +69,7 @@ static void handleButtons(void) {
     if(debounceTime > 0) return;
 
     uint8_t buttons = ~PINC & 0xF8;
+    // char buf[32];
     uint8_t timeButton = ~PIND & (1<<PD6);
     
     if(buttons != lastButtonState || timeButton != lastTimeButtonState) {
@@ -94,6 +95,8 @@ static void handleButtons(void) {
             else {
                 if(buttons & (1<<PC3)) {
                     currentZone = (currentZone + 1) % NUM_ZONES;
+                    // sprintf(buf, "Zone change: %d->%d", currentZone, (currentZone + 1) % NUM_ZONES);
+                    // uartSendString(buf);
                     displayNeedsUpdate = 1;
                 }
                 if(buttons & (1<<PC4)) {

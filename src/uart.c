@@ -12,49 +12,99 @@ static int messageIdx = 0;
 extern Zone zones[NUM_ZONES];
 extern SystemTime systemTime;
 
+// Простая отправка символа
 void uartSendChar(char data) {
     while (!(UCSRA & (1 << UDRE)));
     UDR = data;
 }
 
-void uartSendString(char* data) {
-    while (*data != 0) {
-        uartSendChar(*data++);
+// Простая отправка строки
+void uartSendString(const char* str) {
+    while(*str) {
+        uartSendChar(*str++);
     }
     uartSendChar('\r');
     uartSendChar('\n');
-    _delay_us(500);
+}
+
+// Отправка числа напрямую без sprintf
+static void uartSendNumber(uint8_t num) {
+    // Для чисел до 255
+    char buf[4];  // максимум 3 цифры + \0
+    uint8_t i = 0;
+    
+    // Преобразуем число в строку
+    do {
+        buf[i++] = '0' + (num % 10);
+        num = num / 10;
+    } while(num > 0);
+    
+    // Отправляем в обратном порядке
+    while(i > 0) {
+        uartSendChar(buf[--i]);
+    }
 }
 
 void sendZoneData(const uint8_t index) {
-    char buf[32];
-    sprintf(buf, "Zone%d: H=%d%% F=%dL/min A=%d", 
-            index + 1,
-            zones[index].humidity,
-            zones[index].flowRate,
-            zones[index].isActive);
-    uartSendString(buf);
+    uint8_t sreg = SREG;
+    cli();
+    
+    // Сначала копируем все данные локально
+    uint8_t humidity = zones[index].humidity;
+    uint8_t flowRate = zones[index].flowRate;
+    uint8_t isActive = zones[index].isActive;
+    
+    SREG = sreg;
+    
+    // Отправляем данные напрямую, без формирования строки
+    uartSendChar('Z');
+    uartSendChar('o');
+    uartSendChar('n');
+    uartSendChar('e');
+    uartSendNumber(index + 1);
+    uartSendChar(':');
+    uartSendChar(' ');
+    uartSendChar('H');
+    uartSendChar('=');
+    uartSendNumber(humidity);
+    uartSendChar("%");
+    uartSendChar(' ');
+    uartSendChar('F');
+    uartSendChar('=');
+    uartSendNumber(flowRate);
+    uartSendChar(' ');
+    uartSendChar('L');
+    uartSendChar('/');
+    uartSendChar("m");
+    uartSendChar('i');
+    uartSendChar('n');
+    uartSendChar(' ');
+    uartSendChar('A');
+    uartSendChar('=');
+    uartSendNumber(isActive);
+    uartSendString("");
 }
 
-void sendCurrentData(void) {
-    for (uint8_t i = 0; i < NUM_ZONES; i++) {
-        sendZoneData(i);
-    }
-}
-
-void handleUartMessage(void) {
+void handleCommand(void) {
     // Команда запроса данных
-   if(strcmp(message, "data;") == 0) {
-        // При запросе данных разрешаем обновление
-        zoneUpdateDisabled = 0;
-        sendCurrentData();
+    if(strcmp(message, "data;") == 0) {
+        uartSendString("---Data---");
+        // Отправляем данные по каждой зоне
+        for(uint8_t i = 0; i < NUM_ZONES; i++) {
+            sendZoneData(i);
+        }
+        uartSendString("---End---");
         return;
     }
 
-    int tmp_H, tmp_M, tmp_S;
-    if (sscanf(message, "time:%d:%d:%d;", &tmp_H, &tmp_M, &tmp_S) == 3) {
-        if (tmp_H >= 0 && tmp_H < 24 && tmp_M >= 0 && tmp_M < 60 && tmp_S >= 0 && tmp_S < 60) {
-            setTime(&systemTime, tmp_H, tmp_M, tmp_S);
+    // Обработка команды установки времени
+    int hour, min, sec;
+    if(sscanf(message, "time:%d:%d:%d;", &hour, &min, &sec) == 3) {
+        if(hour >= 0 && hour < 24 && min >= 0 && min < 60 && sec >= 0 && sec < 60) {
+            uint8_t sreg = SREG;
+            cli();
+            setTime(&systemTime, hour, min, sec);
+            SREG = sreg;
             uartSendString("OK");
             return;
         }
@@ -62,55 +112,47 @@ void handleUartMessage(void) {
 
     // Обработка команд для зон
     int zone;
-    char action[16]; 
-    if(sscanf(message, "zone%1d:%[^;];", &zone, action) == 2 && 
+    char cmd[10];
+    if(sscanf(message, "zone%d:%[^;];", &zone, cmd) == 2 && 
        zone >= 1 && zone <= NUM_ZONES) {
-       
-        zone--;
         
-        // Отключаем обновление по таймеру
-        cli();
-        zoneUpdateDisabled = 1;
+        zone--; // Преобразуем в индекс массива
+        uint8_t sreg = SREG;
         
-        if(strcmp(action, "on") == 0) {
+        if(strcmp(cmd, "on") == 0) {
+            cli();
             zones[zone].isManual = 1;
             zones[zone].isActive = 1;
             PORTB |= (1 << zone);
-            sei();
-            uartSendString("OK");
+            SREG = sreg;
+            uartSendString("ON");
             return;
         }
-        
-        if(strcmp(action, "off") == 0) {
-            zones[zone].isManual = 0; 
+        else if(strcmp(cmd, "off") == 0) {
+            cli();
+            zones[zone].isManual = 0;
             zones[zone].isActive = 0;
             zones[zone].timeRemaining = 0;
             PORTB &= ~(1 << zone);
-            sei();
-            uartSendString("OK");
+            SREG = sreg;
+            uartSendString("OFF");
             return;
         }
-
-        // После команды - оставляем обновления отключенными
-        sei();
-        uartSendString("OK");
-        return;
+        // Другие команды можно добавить по аналогии
     }
 
-    // При ошибке включаем обновления
-    zoneUpdateDisabled = 0;
     uartSendString("ERROR");
 }
 
 ISR(USART_RX_vect) {
     char received = UDR;
 
-    if (received == '\n') {
+    if(received == '\n') {
         message[messageIdx] = '\0';
-        handleUartMessage();
+        handleCommand();  // Обработка команды прямо в прерывании
         messageIdx = 0;
     }
-    else if ((received != '\r') && (messageIdx < sizeof(message) - 1)) {
+    else if(received != '\r' && messageIdx < sizeof(message) - 1) {
         message[messageIdx++] = received;
     }
 }
@@ -123,4 +165,6 @@ void initUart(void) {
 
     UCSRB = (1 << RXEN) | (1 << TXEN) | (1 << RXCIE);
     UCSRC = (1 << URSEL) | (1 << UCSZ1) | (1 << UCSZ0);
+    
+    uartSendString("UART OK");
 }

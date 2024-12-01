@@ -4,7 +4,6 @@
 #include "time.h"
 
 #define NUM_ZONES 2
-
 typedef struct {
     uint8_t humidity;
     uint8_t targetHumidity;
@@ -26,8 +25,6 @@ void updateZone(Zone* zone, uint8_t index, SystemTime* time);
 // void setZoneActive(Zone* zone, uint8_t index, uint8_t active);
 void adjustParameter(Zone* zone, uint8_t param, int8_t change);
 void toggleManual(Zone* zone, uint8_t index);
-
-
 
 // Parameters
 #define PARAM_HUMIDITY 0
