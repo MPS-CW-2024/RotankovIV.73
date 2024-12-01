@@ -20,6 +20,8 @@ static volatile uint8_t lastButtonState = 0;
 static volatile uint8_t lastTimeButtonState = 0;
 static volatile uint16_t debounceTime = 0;
 
+extern volatile uint8_t commandReady;
+
 ISR(TIMER0_COMP_vect) {
     static uint16_t msCounter = 0;
     
@@ -145,6 +147,11 @@ int main(void) {
         processDhtData(&zones[0], 0);
         processDhtData(&zones[1], 1);
         checkLeaks(zones);
+
+        if(commandReady) {
+            handleCommand();     // Обрабатываем команду в основном цикле
+            commandReady = 0;    // Сбрасываем флаг
+        }
         
         if(displayNeedsUpdate) {
             if(systemTime.isSettingTime) {

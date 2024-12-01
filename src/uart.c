@@ -8,6 +8,7 @@
 
 static char message[30];
 static int messageIdx = 0;
+volatile uint8_t commandReady = 0;
 
 extern Zone zones[NUM_ZONES];
 extern SystemTime systemTime;
@@ -138,7 +139,6 @@ void handleCommand(void) {
             uartSendString("OFF");
             return;
         }
-        // Другие команды можно добавить по аналогии
     }
 
     uartSendString("ERROR");
@@ -149,7 +149,7 @@ ISR(USART_RX_vect) {
 
     if(received == '\n') {
         message[messageIdx] = '\0';
-        handleCommand();  // Обработка команды прямо в прерывании
+        commandReady = 1;  // Устанавливаем флаг готовности команды
         messageIdx = 0;
     }
     else if(received != '\r' && messageIdx < sizeof(message) - 1) {
