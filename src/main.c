@@ -20,6 +20,8 @@ static volatile uint8_t lastButtonState = 0;
 static volatile uint8_t lastTimeButtonState = 0;
 static volatile uint16_t debounceTime = 0;
 
+extern volatile uint8_t commandReady;
+
 ISR(TIMER0_COMP_vect) {
     static uint16_t msCounter = 0;
     
@@ -69,6 +71,7 @@ static void handleButtons(void) {
     if(debounceTime > 0) return;
 
     uint8_t buttons = ~PINC & 0xF8;
+    // char buf[32];
     uint8_t timeButton = ~PIND & (1<<PD6);
     
     if(buttons != lastButtonState || timeButton != lastTimeButtonState) {
@@ -94,6 +97,8 @@ static void handleButtons(void) {
             else {
                 if(buttons & (1<<PC3)) {
                     currentZone = (currentZone + 1) % NUM_ZONES;
+                    // sprintf(buf, "Zone change: %d->%d", currentZone, (currentZone + 1) % NUM_ZONES);
+                    // uartSendString(buf);
                     displayNeedsUpdate = 1;
                 }
                 if(buttons & (1<<PC4)) {
@@ -142,6 +147,11 @@ int main(void) {
         processDhtData(&zones[0], 0);
         processDhtData(&zones[1], 1);
         checkLeaks(zones);
+
+        if(commandReady) {
+            handleCommand();     // Обрабатываем команду в основном цикле
+            commandReady = 0;    // Сбрасываем флаг
+        }
         
         if(displayNeedsUpdate) {
             if(systemTime.isSettingTime) {
@@ -154,4 +164,4 @@ int main(void) {
     }
     
     return 0;
-}   
+}

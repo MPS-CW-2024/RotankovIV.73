@@ -1,26 +1,24 @@
 #include "zone_control.h"
 #include "lcd.h"
+#include "uart.h"
 #include <avr/io.h>
+#include <util/delay.h>
 
 #define FLOW_CHECK_MS 10000
 #define LEAK_THRESHOLD 20    // 20% отклонение
+#define SOUND_PORT PORTE
+// Пин вывода звукового сигнала
+#define SOUND_PIN PE0
+#define DELAY_MS_VAL 1500
 
 static uint8_t leakStates = 0;
 
-void handleZoneAlarm(uint8_t zoneIdx, uint8_t hasLeak) {
-    if(hasLeak) {
-        if(!(leakStates & (1 << zoneIdx))) {
-            leakStates |= (1 << zoneIdx);
-            PORTD |= (1 << PD7);    // LED
-            PORTE |= (1 << PE0);    // Пьезоизлучатель
-            displayError("Flow Error!");
-        }
-    } else {
-        leakStates &= ~(1 << zoneIdx);
-        if(!leakStates) {
-            PORTD &= ~(1 << PD7);
-            PORTE &= ~(1 << PE0);
-        }
+void playErrorTone() {
+    for (int i = 0; i < DELAY_MS_VAL; i++) {
+        SOUND_PORT |= (1 << SOUND_PIN);
+        _delay_us(DELAY_MS_VAL / 2);
+        SOUND_PORT &= ~(1 << SOUND_PIN);
+        _delay_us(DELAY_MS_VAL / 2);
     }
 }
 
@@ -39,9 +37,10 @@ void checkLeaks(Zone* zones) {
                 if(!(leakStates & (1 << i))) {
                     leakStates |= (1 << i);
                     PORTD |= (1 << PD7);    // LED
-                    PORTE |= (1 << PE0);    // Пьезоизлучатель
+                    playErrorTone();
                     char buf[16];
                     sprintf(buf, "Leak in Zone %d!", i + 1);
+                    uartSendString(buf);
                     displayError(buf);
                 }
             } else {

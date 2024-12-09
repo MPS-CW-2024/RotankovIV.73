@@ -2,6 +2,8 @@
 #include <avr/io.h>
 #include "time.h"
 
+volatile uint8_t zoneUpdateDisabled = 0;
+
 void initZones(Zone* zones) {
     for(uint8_t i = 0; i < NUM_ZONES; i++) {
         zones[i].humidity = 0;
@@ -18,6 +20,7 @@ void initZones(Zone* zones) {
 }
 
 void updateZone(Zone* zone, uint8_t index, SystemTime* time) {
+    if(zoneUpdateDisabled) return;
     if(!zone->isActive && !zone->isManual) {
         if(time->hours == zone->startHour && 
            time->minutes == zone->startMinute &&
@@ -51,22 +54,6 @@ void toggleManual(Zone* zone, uint8_t index) {
         zone->timeRemaining = 0;
     }
 }
-
-// void setZoneActive(Zone* zone, uint8_t index, uint8_t active) {
-//     cli();
-    
-//     zone->isManual = active;
-//     zone->isActive = active;
-    
-//     if(active) {
-//         PORTB |= (1 << index);
-//     } else {
-//         PORTB &= ~(1 << index);
-//         zone->timeRemaining = 0;
-//     }
-    
-//     sei();
-// }
 
 void adjustParameter(Zone* zone, uint8_t param, int8_t change) {
     switch(param) {

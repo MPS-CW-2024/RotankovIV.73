@@ -6,7 +6,7 @@
 // Базовые функции UART
 void initUart(void);
 void uartSendChar(char data);
-void uartSendString(char* str);
+void uartSendString(const char* str);
 void sendCurrentData(void);
 void sendZoneData(const uint8_t index);
 
