@@ -1,0 +1,53 @@
+# Ignore compiled object files and ELF files
+*.o
+# *.elf
+*.map
+# not best practice but anyway
+# *.hex
+*.bin
+*.lst
+*.lss
+*.sym
+
+# Ignore temporary build files and folders
+/build/
+.obj/
+*.dep
+
+# Ignore debugging information
+*.d
+
+# Ignore log files
+*.log
+
+# Ignore editor/IDE-specific files
+# Eclipse
+.settings/
+.project
+.cproject
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# CLion
+.idea/
+*.iml
+cmake-build-*/
+
+# Makefile backups
+*.bak
+*.old
+*.swp
+*.swo
+
+# Ignore AVRDUDE temporary files
+*.eep
+
+# Ignore temporary files created by tools or the OS
+*.tmp
+*.DS_Store
+Thumbs.db
+
+# ignoring /obj folder
+/obj/
